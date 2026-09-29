@@ -3,10 +3,10 @@
 #include <sstream> // Include the necessary header for string stream
 #include <vector>
 
-std::vector<std::string> split(const std::string& line) {
-    std::vector<std::string> words;
-    std::istringstream stream(line);
-    std::string word;
+std::vector<std::string> split(const std::string& line) { 
+    std::vector<std::string> words; // Create a vector to hold the split words
+    std::istringstream stream(line); // Create a string stream from the input line
+    std::string word; 
     while (stream >> word) {
         words.push_back(word);
     }
@@ -28,12 +28,18 @@ int main(){
             break; // Print a newline if input fails
         }
 
-        if (line == "exit")
-        {          // Check if the user wants to exit
-            break; // Exit the loop if the user types "exit"
-        }
+  
 
         std::vector<std::string> words = split(line);
+
+                if (words.empty()) {
+            continue;
+        }
+
+        if (words[0] == "exit") {
+            break;
+        }
+
         for (const std::string& w : words) {
             std::cout << "[" << w << "]";
         }

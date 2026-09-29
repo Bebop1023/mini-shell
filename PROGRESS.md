@@ -1,9 +1,9 @@
 # Mini Shell (C++): Progress
 
 ## Current status
-- **Milestone:** M1. Split the line into words (M0 done ✅)
-- **Last completed step:** M0.5 quits cleanly on Ctrl+D. M0 complete.
-- **Next step:** M1.1: write `split()` with `std::istringstream`
+- **Milestone:** M2. Run one command (M0, M1 done ✅)
+- **Last completed step:** M1.3 skips empty lines, `exit` checked via `words[0]`. M1 complete.
+- **Next step:** M2.1: `fork()` and print which process is parent and which is child
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** M7 by Oct 4, 2026 (NVIDIA Ignite application)
@@ -12,7 +12,7 @@
 | File | What it does |
 |------|--------------|
 | `PROGRESS.md` | This file. Tracks progress, walls, and concepts (Claude maintains it) |
-| `main.cpp` | The shell's source code. `main()` loops: prompt, read a line, echo it. Quits on `exit` or Ctrl+D |
+| `main.cpp` | The shell's source code. `main()` loops: prompt, read a line, echo it. Quits on `exit` or Ctrl+D. `split()` breaks a line into words |
 | `mysh`, `mysh.dSYM/` | Compiled program + debug info (build output, git-ignored) |
 | `.gitignore` | Keeps the compiled binary and debug files out of git |
 
@@ -36,9 +36,9 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - [x] M0.5 Quit cleanly on Ctrl+D (end of input)
 
 ### M1. Split the line into words
-- [ ] M1.1 Write `split()` using `std::istringstream`, returning `std::vector<std::string>`
-- [ ] M1.2 Print each word in `[brackets]` to prove extra spaces are handled
-- [ ] M1.3 Skip empty lines and lines with only spaces
+- [x] M1.1 Write `split()` using `std::istringstream`, returning `std::vector<std::string>`
+- [x] M1.2 Print each word in `[brackets]` to prove extra spaces are handled
+- [x] M1.3 Skip empty lines and lines with only spaces
 
 ### M2. Run one command
 - [ ] M2.1 `fork()` and print which process is the parent and which is the child
@@ -92,6 +92,9 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-09-29 | M0.2 | Reads one full line from the keyboard and prints `You typed: <line>` | `main.cpp` / `main()` | `std::string`, `std::getline` (reads whole line) vs `cin >>` (one word), pass by reference |
 | 2026-09-29 | M0.3–M0.4 | Loops forever; `break`s when the line is exactly `exit` | `main.cpp` / `main()` | `while (true)`, `break`, `std::string ==` compares text |
 | 2026-09-29 | M0.5 | Quits on Ctrl+D instead of looping forever | `main.cpp` / `main()` | EOF, stream failure state, `if (!getline(...))` |
+| 2026-09-29 | M1.1 | `split()` turns a line into a `vector` of words, skipping extra spaces | `main.cpp` / `split()` | `std::vector`, `std::istringstream`, `>>` skips spaces, `const &` (no copy) |
+| 2026-09-29 | M1.2 | Prints each word as `[word]` | `main.cpp` / `main()` | Range-based `for` loop |
+| 2026-09-29 | M1.3 | Empty or all-space lines just re-prompt; `   exit   ` quits | `main.cpp` / `main()` | `empty()`, `continue` vs `break`, check `empty()` before `[0]` (out-of-bounds is undefined behavior) |
 
 ---
 
@@ -109,6 +112,18 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - **Why:** The ASan runtime starts *before* `main()`. macOS 26.5.1 with Xcode 26.3 (older than the OS) left it stuck during startup. Proved by building the same file with and without `-fsanitize=address`: without it, it worked instantly.
 - **Fix:** Updated Command Line Tools (clang 21), then ran `sudo xcode-select -s /Library/Developer/CommandLineTools` so `clang++` uses them instead of the older Xcode app. ASan works again.
 - **Learned:** When the "obviously correct" code fails, change one variable at a time (here, one compiler flag) to isolate the cause. Also: Ctrl+C kills a stuck program, and code can run before `main()`.
+
+**3. Missing include + missing brace (2026-09-29)**
+- **What broke:** `error: implicit instantiation of undefined template 'std::basic_istringstream<char>'` on line 7, and `error: expected '}'` at the end of the file.
+- **Why:** `<sstream>` wasn't included, so the compiler knew the name `istringstream` but not its full code. Replacing a line also deleted the `}` that closed the `while` loop.
+- **Fix:** Added `#include <sstream>` and `#include <vector>`. Put the `}` back.
+- **Learned:** Include a header for everything you use. `expected '}'` at the end of the file means a `{` is unmatched, and the note points to the open one.
+
+**4. Shell quit after one command (2026-09-29)**
+- **What broke:** The shell printed `[ls][-l]` once and then exited.
+- **Why:** The missing `}` was added at the end of the file, so `return 0;` stayed inside the `while` loop. `return` ends the whole function, and in `main` that ends the program.
+- **Fix:** Moved `return 0;` below the loop's closing `}`.
+- **Learned:** Compiling isn't the same as working. Use indentation (Format Document) to see which block each line is in.
 
 ---
 
@@ -129,3 +144,4 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | M0.2 | `M0.2: read a line with getline and echo it` (0d93da8) |
 | M0.3–M0.4 | `M0.3-M0.4: loop and quit on exit` (6774194) |
 | M0.5 | `M0.5: quit cleanly on Ctrl+D` (7472c6d) |
+| M1.1–M1.2 | `M1.1-M1.2: split line into words` (b9d3e08) |
