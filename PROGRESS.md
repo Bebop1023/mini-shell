@@ -1,17 +1,18 @@
 # Mini Shell (C++): Progress
 
 ## Current status
-- **Milestone:** M0. Echo loop
-- **Last completed step:** M0.2 reads a line with `getline` and echoes it
-- **Next step:** M0.3 + M0.4: loop forever, quit on `exit`
+- **Milestone:** M1. Split the line into words (M0 done ✅)
+- **Last completed step:** M0.5 quits cleanly on Ctrl+D. M0 complete.
+- **Next step:** M1.1: write `split()` with `std::istringstream`
 - **Repo:** https://github.com/Bebop1023/mini-shell
+- **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** M7 by Oct 4, 2026 (NVIDIA Ignite application)
 
 ### Files in the project
 | File | What it does |
 |------|--------------|
 | `PROGRESS.md` | This file. Tracks progress, walls, and concepts (Claude maintains it) |
-| `main.cpp` | The shell's source code. `main()` prints the prompt, reads one line, echoes it |
+| `main.cpp` | The shell's source code. `main()` loops: prompt, read a line, echo it. Quits on `exit` or Ctrl+D |
 | `mysh`, `mysh.dSYM/` | Compiled program + debug info (build output, git-ignored) |
 | `.gitignore` | Keeps the compiled binary and debug files out of git |
 
@@ -30,9 +31,9 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - [x] M0.0 Create the git repo and `.gitignore`
 - [x] M0.1 Print the prompt `mysh> ` (and flush it)
 - [x] M0.2 Read a line with `std::getline` and print it back
-- [ ] M0.3 Loop forever: prompt, read, echo, repeat
-- [ ] M0.4 Quit on `exit`
-- [ ] M0.5 Quit cleanly on Ctrl+D (end of input)
+- [x] M0.3 Loop forever: prompt, read, echo, repeat
+- [x] M0.4 Quit on `exit`
+- [x] M0.5 Quit cleanly on Ctrl+D (end of input)
 
 ### M1. Split the line into words
 - [ ] M1.1 Write `split()` using `std::istringstream`, returning `std::vector<std::string>`
@@ -89,6 +90,8 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-09-29 | M0.1 | Prints `mysh> ` and exits | `main.cpp` / `main()` | `#include`, `std::cout`, flushing buffered output, exit status |
 | 2026-09-29 | Git/GitHub | First commit pushed to public repo `Bebop1023/mini-shell` | none | Local vs. remote, `git remote add`, `git push -u`, personal access token |
 | 2026-09-29 | M0.2 | Reads one full line from the keyboard and prints `You typed: <line>` | `main.cpp` / `main()` | `std::string`, `std::getline` (reads whole line) vs `cin >>` (one word), pass by reference |
+| 2026-09-29 | M0.3–M0.4 | Loops forever; `break`s when the line is exactly `exit` | `main.cpp` / `main()` | `while (true)`, `break`, `std::string ==` compares text |
+| 2026-09-29 | M0.5 | Quits on Ctrl+D instead of looping forever | `main.cpp` / `main()` | EOF, stream failure state, `if (!getline(...))` |
 
 ---
 
@@ -114,6 +117,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 
 - **How a shell runs a program:** zsh makes a copy of itself (fork), the copy turns into my program (exec), and the original waits for it to finish (wait) before showing the prompt again.
 - **`getline` vs `cin >>`:** `getline` reads the whole line including spaces. `cin >>` stops at the first space, so `hello world` would give just `hello`.
+- **Ctrl+D / EOF:** Ctrl+D tells the program there is no more input. `getline` then fails, and `cin` stays failed, so you must check the result or the loop spins forever.
 - **Compile vs link:** compiling turns `.cpp` into machine code. Linking joins the pieces into one program and connects `main`. `ld:` errors come from the linker.
 
 ---
@@ -123,3 +127,5 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 |-----------|----------------|
 | M0.1 | `M0.1: print shell prompt` (d5576c6) |
 | M0.2 | `M0.2: read a line with getline and echo it` (0d93da8) |
+| M0.3–M0.4 | `M0.3-M0.4: loop and quit on exit` (6774194) |
+| M0.5 | `M0.5: quit cleanly on Ctrl+D` (7472c6d) |
