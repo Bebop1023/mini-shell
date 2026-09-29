@@ -2,9 +2,9 @@
 
 ## Current status
 - **Milestone:** M0. Echo loop
-- **Last completed step:** M0.1 prompt prints (works without ASan)
-- **Next step:** Commit M0.1, then M0.2: read a line with `std::getline` and echo it
-- **TODO before M7:** Update Xcode (App Store), then turn `-fsanitize=address` back on and confirm it no longer hangs
+- **Last completed step:** M0.1 prompt prints; first commit pushed to GitHub
+- **Next step:** M0.2: read a line with `std::getline` and echo it
+- **Repo:** https://github.com/Bebop1023/mini-shell
 - **Deadline:** M7 by Oct 4, 2026 (NVIDIA Ignite application)
 
 ### Files in the project
@@ -17,10 +17,10 @@
 
 ### Build command
 ```
-clang++ -std=c++20 -Wall -Wextra -g main.cpp -o mysh
+clang++ -std=c++20 -Wall -Wextra -g -fsanitize=address main.cpp -o mysh
 ./mysh
 ```
-ASan build (`-fsanitize=address`) is **paused**: it hangs at startup until Xcode is updated (see Walls).
+Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Developer/CommandLineTools`).
 
 ---
 
@@ -87,6 +87,7 @@ ASan build (`-fsanitize=address`) is **paused**: it hangs at startup until Xcode
 | 2026-09-29 | Setup | Checked clang++ and git, created PROGRESS.md | none | Toolchain |
 | 2026-09-29 | M0.0 | Local git repo on branch `main`; `.gitignore` ignores `mysh`, `mysh.dSYM/`, `.vscode/` | `.gitignore` | git init, ignoring build output |
 | 2026-09-29 | M0.1 | Prints `mysh> ` and exits | `main.cpp` / `main()` | `#include`, `std::cout`, flushing buffered output, exit status |
+| 2026-09-29 | Git/GitHub | First commit pushed to public repo `Bebop1023/mini-shell` | none | Local vs. remote, `git remote add`, `git push -u`, personal access token |
 
 ---
 
@@ -102,7 +103,7 @@ ASan build (`-fsanitize=address`) is **paused**: it hangs at startup until Xcode
 **⭐ 2. AddressSanitizer build hangs forever at startup (2026-09-29)**
 - **What broke:** `./mysh` printed nothing and spun at 99% CPU. Even `mysh> ` never appeared.
 - **Why:** The ASan runtime starts *before* `main()`. macOS 26.5.1 with Xcode 26.3 (older than the OS) left it stuck during startup. Proved by building the same file with and without `-fsanitize=address`: without it, it worked instantly.
-- **Fix:** Build without ASan for now. Update Xcode, then re-enable before M7.
+- **Fix:** Updated Command Line Tools (clang 21), then ran `sudo xcode-select -s /Library/Developer/CommandLineTools` so `clang++` uses them instead of the older Xcode app. ASan works again.
 - **Learned:** When the "obviously correct" code fails, change one variable at a time (here, one compiler flag) to isolate the cause. Also: Ctrl+C kills a stuck program, and code can run before `main()`.
 
 ---
@@ -117,4 +118,4 @@ ASan build (`-fsanitize=address`) is **paused**: it hangs at startup until Xcode
 ## Git commits
 | Milestone | Commit message |
 |-----------|----------------|
-| | |
+| M0.1 | `M0.1: print shell prompt` (d5576c6) |
