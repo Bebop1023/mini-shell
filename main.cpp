@@ -2,6 +2,11 @@
 #include <string>
 #include <sstream> // Include the necessary header for string stream
 #include <vector>
+#include <sys/types.h>
+#include <unistd.h>
+#include <cstdio>
+
+
 
 std::vector<std::string> split(const std::string& line) { 
     std::vector<std::string> words; // Create a vector to hold the split words
@@ -40,10 +45,21 @@ int main(){
             break;
         }
 
-        for (const std::string& w : words) {
-            std::cout << "[" << w << "]";
+               std::vector<char*> args;
+        for (std::string& w : words) {
+            args.push_back(w.data());  
         }
-        std::cout << std::endl;
+        args.push_back(nullptr);
+
+        pid_t pid = fork(); // Create a new process using fork
+
+        if (pid == 0) {
+            execvp(args[0], args.data()); // Execute the command in the child process
+            perror("execvp");
+            return 1;
+        }
+
+
 
     }
 

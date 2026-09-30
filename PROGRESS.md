@@ -2,8 +2,8 @@
 
 ## Current status
 - **Milestone:** M2. Run one command (M0, M1 done ✅)
-- **Last completed step:** M1.3 skips empty lines, `exit` checked via `words[0]`. M1 complete.
-- **Next step:** M2.1: `fork()` and print which process is parent and which is child
+- **Last completed step:** M2.1 `fork()` prints parent and child PIDs
+- **Next step:** M2.2 + M2.3: build `char*` argv array, call `execvp()` in the child
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** M7 by Oct 4, 2026 (NVIDIA Ignite application)
@@ -41,7 +41,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - [x] M1.3 Skip empty lines and lines with only spaces
 
 ### M2. Run one command
-- [ ] M2.1 `fork()` and print which process is the parent and which is the child
+- [x] M2.1 `fork()` and print which process is the parent and which is the child
 - [ ] M2.2 Convert `vector<string>` into a `char*` argv array ending in `nullptr`
 - [ ] M2.3 Call `execvp()` in the child
 - [ ] M2.4 Call `waitpid()` in the parent so the prompt comes back after the command
@@ -95,6 +95,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-09-29 | M1.1 | `split()` turns a line into a `vector` of words, skipping extra spaces | `main.cpp` / `split()` | `std::vector`, `std::istringstream`, `>>` skips spaces, `const &` (no copy) |
 | 2026-09-29 | M1.2 | Prints each word as `[word]` | `main.cpp` / `main()` | Range-based `for` loop |
 | 2026-09-29 | M1.3 | Empty or all-space lines just re-prompt; `   exit   ` quits | `main.cpp` / `main()` | `empty()`, `continue` vs `break`, check `empty()` before `[0]` (out-of-bounds is undefined behavior) |
+| 2026-09-29 | M2.1 | Forks a child for each command; child prints its PID and exits, parent prints the child's PID | `main.cpp` / `main()` | Processes, PIDs, `fork()` returns 0 in child and child PID in parent, system calls |
 
 ---
 
@@ -145,3 +146,4 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | M0.3–M0.4 | `M0.3-M0.4: loop and quit on exit` (6774194) |
 | M0.5 | `M0.5: quit cleanly on Ctrl+D` (7472c6d) |
 | M1.1–M1.2 | `M1.1-M1.2: split line into words` (b9d3e08) |
+| M1.3 | `M1.3: skip empty lines, exit via first word` (396d073) |
