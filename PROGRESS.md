@@ -1,9 +1,9 @@
 # Mini Shell (C++): Progress
 
 ## Current status
-- **Milestone:** M2. Run one command (M0, M1 done ✅)
-- **Last completed step:** M2.1 `fork()` prints parent and child PIDs
-- **Next step:** M2.2 + M2.3: build `char*` argv array, call `execvp()` in the child
+- **Milestone:** M3. Bad commands don't kill the shell (M0, M1, M2 done ✅)
+- **Last completed step:** M2.5 real commands run and the prompt waits for them. M2 complete.
+- **Next step:** M3.1: check what happens with a bad command, print an error with `perror`
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** M7 by Oct 4, 2026 (NVIDIA Ignite application)
@@ -12,7 +12,7 @@
 | File | What it does |
 |------|--------------|
 | `PROGRESS.md` | This file. Tracks progress, walls, and concepts (Claude maintains it) |
-| `main.cpp` | The shell's source code. `main()` loops: prompt, read a line, echo it. Quits on `exit` or Ctrl+D. `split()` breaks a line into words |
+| `main.cpp` | The shell's source code. `main()` loops: prompt, read a line, echo it. Quits on `exit` or Ctrl+D. `split()` breaks a line into words. Runs real programs with `fork` + `execvp` + `waitpid` |
 | `mysh`, `mysh.dSYM/` | Compiled program + debug info (build output, git-ignored) |
 | `.gitignore` | Keeps the compiled binary and debug files out of git |
 
@@ -42,10 +42,10 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 
 ### M2. Run one command
 - [x] M2.1 `fork()` and print which process is the parent and which is the child
-- [ ] M2.2 Convert `vector<string>` into a `char*` argv array ending in `nullptr`
-- [ ] M2.3 Call `execvp()` in the child
-- [ ] M2.4 Call `waitpid()` in the parent so the prompt comes back after the command
-- [ ] M2.5 Test with `ls`, `ls -l`, `echo hello world`, `pwd`
+- [x] M2.2 Convert `vector<string>` into a `char*` argv array ending in `nullptr`
+- [x] M2.3 Call `execvp()` in the child
+- [x] M2.4 Call `waitpid()` in the parent so the prompt comes back after the command
+- [x] M2.5 Test with `ls`, `ls -l`, `echo hello world`, `pwd`
 
 ### M3. Bad commands don't kill the shell
 - [ ] M3.1 Check `execvp`'s return value and print an error with `perror`
@@ -96,6 +96,8 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-09-29 | M1.2 | Prints each word as `[word]` | `main.cpp` / `main()` | Range-based `for` loop |
 | 2026-09-29 | M1.3 | Empty or all-space lines just re-prompt; `   exit   ` quits | `main.cpp` / `main()` | `empty()`, `continue` vs `break`, check `empty()` before `[0]` (out-of-bounds is undefined behavior) |
 | 2026-09-29 | M2.1 | Forks a child for each command; child prints its PID and exits, parent prints the child's PID | `main.cpp` / `main()` | Processes, PIDs, `fork()` returns 0 in child and child PID in parent, system calls |
+| 2026-09-29 | M2.2–M2.3 | Builds a `char*` list ending in `nullptr`; child calls `execvp` so `ls`, `echo`, `pwd` really run | `main.cpp` / `main()` | Pointers, `.data()`, C-style strings, PATH search, exec replaces the process |
+| 2026-09-29 | M2.4–M2.5 | Parent calls `waitpid` so output comes before the next prompt | `main.cpp` / `main()` | `waitpid`, zombies, child inherits the terminal |
 
 ---
 
@@ -126,6 +128,12 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - **Fix:** Moved `return 0;` below the loop's closing `}`.
 - **Learned:** Compiling isn't the same as working. Use indentation (Format Document) to see which block each line is in.
 
+**5. VS Code red underline on `w.data()` (2026-09-29)**
+- **What broke:** VS Code marked line 50 (`args.push_back(w.data());`) as an error, but `clang++` compiled it fine.
+- **Why:** VS Code's IntelliSense checks code separately from the compiler and assumed an older C++ version, where `.data()` returns `const char*`.
+- **Fix:** C/C++: Edit Configurations (UI) → compiler `/usr/bin/clang++`, standard `c++20`.
+- **Learned:** If the editor and the compiler disagree, trust the compiler.
+
 ---
 
 ## Concepts learned
@@ -134,6 +142,8 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - **How a shell runs a program:** zsh makes a copy of itself (fork), the copy turns into my program (exec), and the original waits for it to finish (wait) before showing the prompt again.
 - **`getline` vs `cin >>`:** `getline` reads the whole line including spaces. `cin >>` stops at the first space, so `hello world` would give just `hello`.
 - **Ctrl+D / EOF:** Ctrl+D tells the program there is no more input. `getline` then fails, and `cin` stays failed, so you must check the result or the loop spins forever.
+- **Shells launch programs:** `ls`, `echo`, `pwd` are separate programs in `/bin`. The shell finds them through PATH and starts them. It doesn't do their work.
+- **fork / exec / wait:** the shell clones itself (fork), the clone becomes the command (exec), and the original waits (wait), so the shell survives every command.
 - **Compile vs link:** compiling turns `.cpp` into machine code. Linking joins the pieces into one program and connects `main`. `ld:` errors come from the linker.
 
 ---
@@ -147,3 +157,5 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | M0.5 | `M0.5: quit cleanly on Ctrl+D` (7472c6d) |
 | M1.1–M1.2 | `M1.1-M1.2: split line into words` (b9d3e08) |
 | M1.3 | `M1.3: skip empty lines, exit via first word` (396d073) |
+| M2.2–M2.3 | `M2.2-M2.3: run commands with fork and execvp` (f175da7) |
+| M2 | `M2: run commands with fork, execvp, waitpid` (12cd90e) |
