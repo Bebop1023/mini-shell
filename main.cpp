@@ -55,6 +55,10 @@ int main(){
 
         pid_t pid = fork(); // Create a new process using fork
 
+        if (pid < 0){
+            perror("fork");
+        }
+
         if (pid == 0) {
             execvp(args[0], args.data()); // Execute the command in the child process
              perror(args[0]);
