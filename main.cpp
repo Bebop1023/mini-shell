@@ -57,8 +57,9 @@ int main(){
 
         if (pid == 0) {
             execvp(args[0], args.data()); // Execute the command in the child process
-            perror("execvp");
-            return 1;
+             perror(args[0]);
+            _exit(127);
+            
         }
                 waitpid(pid, nullptr, 0);
 

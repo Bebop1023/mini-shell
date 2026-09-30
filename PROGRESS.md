@@ -2,8 +2,8 @@
 
 ## Current status
 - **Milestone:** M3. Bad commands don't kill the shell (M0, M1, M2 done ✅)
-- **Last completed step:** M2.5 real commands run and the prompt waits for them. M2 complete.
-- **Next step:** M3.1: check what happens with a bad command, print an error with `perror`
+- **Last completed step:** M3.2 failed exec prints `asdf: No such file or directory` and the child calls `_exit(127)`
+- **Next step:** M3.3: handle `fork()` failing (`pid < 0`)
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** M7 by Oct 4, 2026 (NVIDIA Ignite application)
@@ -48,10 +48,10 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - [x] M2.5 Test with `ls`, `ls -l`, `echo hello world`, `pwd`
 
 ### M3. Bad commands don't kill the shell
-- [ ] M3.1 Check `execvp`'s return value and print an error with `perror`
-- [ ] M3.2 `_exit(127)` in the child after a failed exec (no duplicate shells)
+- [x] M3.1 Check `execvp`'s return value and print an error with `perror`
+- [x] M3.2 `_exit(127)` in the child after a failed exec (no duplicate shells)
 - [ ] M3.3 Handle `fork()` failing
-- [ ] M3.4 Prove it: type a bad command, then `exit` once and the shell really quits
+- [x] M3.4 Prove it: type a bad command, then `exit` once and the shell really quits
 
 ### M4. Built-ins: cd and exit
 - [ ] M4.1 Understand why `cd` can't run in a child process
@@ -98,6 +98,8 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-09-29 | M2.1 | Forks a child for each command; child prints its PID and exits, parent prints the child's PID | `main.cpp` / `main()` | Processes, PIDs, `fork()` returns 0 in child and child PID in parent, system calls |
 | 2026-09-29 | M2.2–M2.3 | Builds a `char*` list ending in `nullptr`; child calls `execvp` so `ls`, `echo`, `pwd` really run | `main.cpp` / `main()` | Pointers, `.data()`, C-style strings, PATH search, exec replaces the process |
 | 2026-09-29 | M2.4–M2.5 | Parent calls `waitpid` so output comes before the next prompt | `main.cpp` / `main()` | `waitpid`, zombies, child inherits the terminal |
+| 2026-09-29 | M3.1–M3.2 | Bad command prints `<cmd>: No such file or directory`; child ends with `_exit(127)` | `main.cpp` / `main()` | exec only returns on failure, `perror`, `_exit` vs `return`, exit code 127 |
+| 2026-09-29 | M3.4 | Proved one `exit` quits after a bad command (no leftover shells) | none (test) | `ps` to list processes |
 
 ---
 
@@ -133,6 +135,12 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - **Why:** VS Code's IntelliSense checks code separately from the compiler and assumed an older C++ version, where `.data()` returns `const char*`.
 - **Fix:** C/C++: Edit Configurations (UI) → compiler `/usr/bin/clang++`, standard `c++20`.
 - **Learned:** If the editor and the compiler disagree, trust the compiler.
+
+**⭐ 6. Duplicate shells after a failed command (2026-09-29)**
+- **What broke:** With `return 1;` removed from the child, typing `asdf` twice then `ps` showed 3 `mysh` processes, and it took 3 `exit`s to quit.
+- **Why:** When `execvp` fails, it returns, and the child is still a full copy of the shell. With nothing to stop it, the child loops back, prints `mysh> `, and reads input as a second shell. The parent sits in `waitpid` underneath.
+- **Fix:** End the child right after a failed exec with `_exit(127)`. `_exit` skips cleanup, so the child doesn't flush the parent's copied output buffers (which would print text twice).
+- **Learned:** After `fork`, every path in the child must end in exec or exit. Use `ps` to see how many processes are really running.
 
 ---
 
