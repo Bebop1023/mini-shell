@@ -5,6 +5,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <cstdio>
+#include <sys/wait.h>
+
 
 
 
@@ -58,6 +60,8 @@ int main(){
             perror("execvp");
             return 1;
         }
+                waitpid(pid, nullptr, 0);
+
 
 
 
