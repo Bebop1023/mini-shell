@@ -57,6 +57,7 @@ int main(){
 
         if (pid < 0){
             perror("fork");
+            continue;
         }
 
         if (pid == 0) {
