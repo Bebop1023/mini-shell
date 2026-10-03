@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include <sstream> // Include the necessary header for string stream
+#include "parser.h"
 #include <vector>
 #include <sys/types.h>
 #include <unistd.h>
@@ -12,15 +12,7 @@
 
 
 
-std::vector<std::string> split(const std::string& line) { 
-    std::vector<std::string> words; // Create a vector to hold the split words
-    std::istringstream stream(line); // Create a string stream from the input line
-    std::string word; 
-    while (stream >> word) {
-        words.push_back(word);
-    }
-    return words;
-}
+
 
 
 
