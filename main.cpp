@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <cstdio>
 #include <sys/wait.h>
+#include <cstdlib>
+
 
 
 
@@ -37,7 +39,7 @@ int main(){
 
   
 
-        std::vector<std::string> words = split(line);
+        std::vector<std::string> words = split(line); // Split the input line into words using the split function
 
                 if (words.empty()) {
             continue;
@@ -47,9 +49,24 @@ int main(){
             break;
         }
 
+        if (words[0] == "cd") {
+            const char* dir; 
+            if (words.size() < 2) {
+                dir = getenv("HOME"); // Use getenv to get the value of the HOME environment variable
+            } else {
+                dir = words[1].c_str(); // Use c_str() to get a C-style string from the std::string
+            }
+            if (dir == nullptr || chdir(dir) != 0) { // Use chdir to change the current working directory
+                perror("cd");
+            }
+            continue;
+        }
+
+
+
                std::vector<char*> args;
         for (std::string& w : words) {
-            args.push_back(w.data());  
+            args.push_back(w.data());   // Use data() to get a pointer to the underlying character array of the std::string
         }
         args.push_back(nullptr);
 
@@ -62,7 +79,7 @@ int main(){
 
         if (pid == 0) {
             execvp(args[0], args.data()); // Execute the command in the child process
-             perror(args[0]);
+             perror(args[0]); 
             _exit(127);
             
         }
