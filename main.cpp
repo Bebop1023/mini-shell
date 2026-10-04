@@ -7,9 +7,22 @@
 #include <cstdio>
 #include <sys/wait.h>
 #include <cstdlib>
+#include <fcntl.h>
 
 
-void runCommand(std::vector<std::string>& words) { // Function to execute a command represented as a vector of strings (arguments)
+// Function to run a command represented as a vector of strings (arguments) and redirect output to a specified file if provided
+void runCommand(std::vector<std::string>& words, const std::string& outfile) { 
+    
+    if (!outfile.empty()) {
+        int fd = open(outfile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644); // Open the output file for writing, creating it if it doesn't exist, and truncating it if it does
+        if (fd < 0) {
+            perror(outfile.c_str());
+            _exit(1);
+        }
+        dup2(fd, 1); // Redirect standard output to the specified output file
+        close(fd);
+    }
+    
     std::vector<char*> args;
     for (std::string& w : words) {
         args.push_back(w.data());
@@ -21,7 +34,7 @@ void runCommand(std::vector<std::string>& words) { // Function to execute a comm
     _exit(127);
 }
 // Function to run a pipeline of two commands represented as vectors of strings (arguments)
-void runPipeline(std::vector<std::string>& left, std::vector<std::string>& right) { 
+void runPipeline(std::vector<std::string>& left, std::vector<std::string>& right, const std::string& outfile) { 
     int fds[2];
     if (pipe(fds) < 0) {
         perror("pipe");
@@ -29,19 +42,34 @@ void runPipeline(std::vector<std::string>& left, std::vector<std::string>& right
     }
     // Create a new process for the left command
     pid_t pid1 = fork();
+        if (pid1 < 0) { // Check for fork error
+        perror("fork");
+        close(fds[0]);
+        close(fds[1]);
+        return;
+    }
+    // In the child process for the left command, redirect standard output to write to the pipe and execute the command
     if (pid1 == 0) {
         dup2(fds[1], 1);
         close(fds[0]);
         close(fds[1]);
-        runCommand(left);
+        runCommand(left, "");
     }
     // Create a new process for the right command
     pid_t pid2 = fork();
+        if (pid2 < 0) { // Check for fork error
+        perror("fork");
+        close(fds[0]);
+        close(fds[1]);
+        waitpid(pid1, nullptr, 0);
+        return;
+    }
+    // In the child process for the right command, redirect standard input to read from the pipe and execute the command
     if (pid2 == 0) {
         dup2(fds[0], 0);
         close(fds[0]);
         close(fds[1]);
-        runCommand(right);
+        runCommand(right, outfile);
     }
     // Close the pipe file descriptors in the parent process and wait for both child processes to finish
     close(fds[0]);
@@ -93,7 +121,7 @@ int main(){
         }
 
         if (p.commands.size() == 2) {
-            runPipeline(p.commands[0], p.commands[1]);
+            runPipeline(p.commands[0], p.commands[1], p.outfile); // Execute the pipeline of two commands
             continue;
         }
 
@@ -128,7 +156,7 @@ int main(){
         }
 
         if (pid == 0) {
-                    runCommand(words);
+                    runCommand(words, p.outfile); // Execute the command in the child process
 
         }
                 waitpid(pid, nullptr, 0);
