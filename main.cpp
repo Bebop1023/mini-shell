@@ -20,6 +20,40 @@ void runCommand(std::vector<std::string>& words) { // Function to execute a comm
     perror(args[0]);
     _exit(127);
 }
+// Function to run a pipeline of two commands represented as vectors of strings (arguments)
+void runPipeline(std::vector<std::string>& left, std::vector<std::string>& right) { 
+    int fds[2];
+    if (pipe(fds) < 0) {
+        perror("pipe");
+        return;
+    }
+    // Create a new process for the left command
+    pid_t pid1 = fork();
+    if (pid1 == 0) {
+        dup2(fds[1], 1);
+        close(fds[0]);
+        close(fds[1]);
+        runCommand(left);
+    }
+    // Create a new process for the right command
+    pid_t pid2 = fork();
+    if (pid2 == 0) {
+        dup2(fds[0], 0);
+        close(fds[0]);
+        close(fds[1]);
+        runCommand(right);
+    }
+    // Close the pipe file descriptors in the parent process and wait for both child processes to finish
+    close(fds[0]);
+    close(fds[1]);
+    waitpid(pid1, nullptr, 0);
+    waitpid(pid2, nullptr, 0);
+}
+
+
+
+
+
 
 
 
@@ -49,14 +83,20 @@ int main(){
             continue;
         }
 
-        if (p.commands.empty()) {
+        if (p.commands.empty()) { // Handle the case where no commands were parsed from the input line
+            continue;
+        }
+
+        if (p.commands.size() > 2) {
+            std::cerr << "mysh: only one pipe is supported" << std::endl;
             continue;
         }
 
         if (p.commands.size() == 2) {
-            std::cout << "pipe: " << p.commands[0][0] << " | " << p.commands[1][0] << std::endl;
+            runPipeline(p.commands[0], p.commands[1]);
             continue;
         }
+
 
         std::vector<std::string> words = p.commands[0];
 

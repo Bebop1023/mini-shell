@@ -1,9 +1,9 @@
 # Mini Shell (C++): Progress
 
 ## Current status
-- **Milestone:** M5. Pipes (M0–M4 done ✅)
-- **Last completed step:** Moved exec code into `runCommand()` (prep for running two commands)
-- **Next step:** M5.2–M5.5: write the pipe code (`pipe`, two forks, `dup2`, close ends, wait for both)
+- **Milestone:** M6. Output redirection (M0–M5 done ✅)
+- **Last completed step:** M5.6 `ls | wc -l` and `echo hello | tr a-z A-Z` work. M5 complete.
+- **Next step:** M6.1: detect `> filename` in the words
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** Apply between Oct 5 and Oct 18, 2026 (NVIDIA Ignite). No benefit to applying early, so aim for a polished project. Target: M9 done before applying.
@@ -12,7 +12,7 @@
 | File | What it does |
 |------|--------------|
 | `PROGRESS.md` | This file. Tracks progress, walls, and concepts (Claude maintains it) |
-| `main.cpp` | `runCommand()` builds argv and execs (child only, never returns). `main()`: prompt, read, `parsePipeline`, built-ins (`exit`, `cd`), then `fork` + `runCommand` + `waitpid` |
+| `main.cpp` | `runCommand()` builds argv and execs (child only, never returns). `runPipeline()` runs `a | b` with `pipe` + 2 forks + `dup2`. `main()`: prompt, read, `parsePipeline`, built-ins (`exit`, `cd`), then `fork` + `runCommand` + `waitpid` |
 | `parser.h` | Declarations of the parsing functions (the "menu") and the `Pipeline` struct (commands + error) |
 | `parser.cpp` | Parsing code: `split()` breaks a line into words; `parsePipeline()` splits words at `|` into commands and reports syntax errors. No fork/exec, so the fuzzer can test it safely |
 | `mysh`, `mysh.dSYM/` | Compiled program + debug info (build output, git-ignored) |
@@ -65,11 +65,11 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 ### M5. Pipes: cmd1 | cmd2
 - [x] M5.0 Move `split()` into `parser.h` / `parser.cpp` (so the fuzzer can test parsing without running commands)
 - [x] M5.1 Split the words at `|` into two commands (bad input like `| ls`, `ls |` gives an error)
-- [ ] M5.2 Create a pipe with `pipe()`
-- [ ] M5.3 Fork two children and wire them up with `dup2()`
-- [ ] M5.4 Close every unused pipe end (so the reader sees end-of-file)
-- [ ] M5.5 Wait for both children
-- [ ] M5.6 Test: `ls | wc -l`, `echo hello | tr a-z A-Z`
+- [x] M5.2 Create a pipe with `pipe()`
+- [x] M5.3 Fork two children and wire them up with `dup2()`
+- [x] M5.4 Close every unused pipe end (so the reader sees end-of-file)
+- [x] M5.5 Wait for both children
+- [x] M5.6 Test: `ls | wc -l`, `echo hello | tr a-z A-Z`
 
 ### M6. Stretch: output redirection
 - [ ] M6.1 Detect `> filename` in the words
@@ -123,6 +123,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-10-03 | M5.0 | `split()` lives in `parser.cpp`, declared in `parser.h`; build lists both `.cpp` files | `parser.h`, `parser.cpp`, `main.cpp` | Headers, declaration vs definition, `#pragma once`, `""` vs `<>` includes, refactoring |
 | 2026-10-03 | M5.1 | `parsePipeline()` returns a list of commands; `\| ls`, `ls \|`, `ls \| \| wc` print a syntax error; 2 commands print `pipe: a \| b` for now | `parser.cpp` / `parsePipeline()`, `main.cpp` / `main()` | `struct`, vector of vectors, returning two things in one struct, `std::cerr`, C++ is case-sensitive |
 | 2026-10-04 | Refactor | Argv building + `execvp` + `_exit(127)` moved into `runCommand()` so the pipe code can reuse it | `main.cpp` / `runCommand()` | Functions to avoid duplicate code; file descriptors, `pipe()`, `dup2()` (concepts introduced) |
+| 2026-10-04 | M5.2–M5.6 | `runPipeline()` makes a pipe, forks two children, `dup2`s child 1's stdout to the write end and child 2's stdin to the read end, closes all extra ends, waits for both. 3+ commands print `only one pipe is supported` | `main.cpp` / `runPipeline()`, `main()` | File descriptors 0/1/2, `pipe()`, `dup2()`, `close()`, EOF only after every write end is closed |
 
 ---
 
@@ -185,6 +186,8 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - **Why `cd` must be a built-in:** `cd` in a child changes the child's folder, then the child ends and the change is gone. The parent (the shell) never moves. Each process has its own current folder.
 - **Headers:** the `.h` file is the menu (what functions exist), the `.cpp` file is the kitchen (the code). Putting only declarations in the header means the code exists once, so files that include it don't create duplicate copies.
 - **Pipe parsing:** fill a box with words; a `|` puts the box on the shelf. An empty box at a `|` or at the end (with something already on the shelf) means a command is missing.
+- **File descriptors:** numbered slots. 0 = input (keyboard), 1 = output (screen), 2 = errors. Programs just use the slot number and don't know where it leads.
+- **Pipes:** `pipe()` makes a tube (`fds[0]` exit, `fds[1]` entrance). `dup2` points kid 1's output into the tube and kid 2's input out of it. Everyone must let go of tube ends they don't use, or the reader waits forever.
 - **Compile vs link:** compiling turns `.cpp` into machine code. Linking joins the pieces into one program and connects `main`. `ld:` errors come from the linker.
 
 ---
@@ -205,3 +208,4 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | M4 | `M4: cd and exit built-ins, cd with no argument goes to HOME` (08c2fed) |
 | M5.0 | `M5.0: move split() into parser.h/parser.cpp` (e1f71ad) |
 | M5.1 | `M5.1: parse pipelines, reject empty commands around \|` (15f4ef3) |
+| M5.2 | `M5.2: move exec code into runCommand()` (4f723b5) |
