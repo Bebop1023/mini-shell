@@ -11,3 +11,33 @@ std::vector<std::string> split(const std::string& line) {
     }
     return words;
 }
+
+Pipeline parsePipeline(const std::string& line) { // Function to parse a line into a Pipeline structure
+    Pipeline result;
+    std::vector<std::string> words = split(line);
+    std::vector<std::string> current;
+
+    for (const std::string& word : words) { // Iterate through each word in the input line
+        if (word == "|") {
+            if (current.empty()) {
+                result.error = "Syntax error: empty command before pipe";
+                return result;
+            }
+            result.commands.push_back(current);
+            current.clear();
+        } else {
+            current.push_back(word);
+        }
+    }
+        if (current.empty() && !result.commands.empty()) {
+        result.error = "Syntax error: empty command after pipe";
+        return result;
+    }
+
+
+    if (!current.empty()) {
+        result.commands.push_back(current);
+    }
+
+    return result;
+}

@@ -31,11 +31,24 @@ int main(){
 
   
 
-        std::vector<std::string> words = split(line); // Split the input line into words using the split function
+        Pipeline p = parsePipeline(line);
 
-                if (words.empty()) {
+        if (!p.error.empty()) {
+            std::cerr << "mysh: " << p.error << std::endl;
             continue;
         }
+
+        if (p.commands.empty()) {
+            continue;
+        }
+
+        if (p.commands.size() == 2) {
+            std::cout << "pipe: " << p.commands[0][0] << " | " << p.commands[1][0] << std::endl;
+            continue;
+        }
+
+        std::vector<std::string> words = p.commands[0];
+
 
         if (words[0] == "exit") {
             break;

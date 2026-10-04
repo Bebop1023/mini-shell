@@ -2,8 +2,8 @@
 
 ## Current status
 - **Milestone:** M5. Pipes (M0–M4 done ✅)
-- **Last completed step:** M4.4 plain `cd` goes to `$HOME`. M4 complete.
-- **Next step:** Commit M4, then M5.1: move parsing into `parser.cpp` / `parser.h`
+- **Last completed step:** M5.1 `parsePipeline()` splits at `|` and rejects empty commands
+- **Next step:** M5.2: create a pipe with `pipe()`
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** Apply between Oct 5 and Oct 18, 2026 (NVIDIA Ignite). No benefit to applying early, so aim for a polished project. Target: M9 done before applying.
@@ -12,13 +12,15 @@
 | File | What it does |
 |------|--------------|
 | `PROGRESS.md` | This file. Tracks progress, walls, and concepts (Claude maintains it) |
-| `main.cpp` | The shell's source code. `main()` loops: prompt, read a line, echo it. Quits on `exit` or Ctrl+D. `split()` breaks a line into words. Runs real programs with `fork` + `execvp` + `waitpid` |
+| `main.cpp` | The shell loop: prompt, read, split, built-ins (`exit`, `cd`), then `fork` + `execvp` + `waitpid` |
+| `parser.h` | Declarations of the parsing functions (the "menu") and the `Pipeline` struct (commands + error) |
+| `parser.cpp` | Parsing code: `split()` breaks a line into words; `parsePipeline()` splits words at `|` into commands and reports syntax errors. No fork/exec, so the fuzzer can test it safely |
 | `mysh`, `mysh.dSYM/` | Compiled program + debug info (build output, git-ignored) |
 | `.gitignore` | Keeps the compiled binary and debug files out of git |
 
 ### Build command
 ```
-clang++ -std=c++20 -Wall -Wextra -g -fsanitize=address main.cpp -o mysh
+clang++ -std=c++20 -Wall -Wextra -g -fsanitize=address main.cpp parser.cpp -o mysh
 ./mysh
 ```
 Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Developer/CommandLineTools`).
@@ -61,8 +63,8 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - [x] M4.5 Error messages for bad directories
 
 ### M5. Pipes: cmd1 | cmd2
-- [ ] M5.0 Move `split()` into `parser.h` / `parser.cpp` (so the fuzzer can test parsing without running commands)
-- [ ] M5.1 Split the words at `|` into two commands (bad input like `| ls`, `ls |` gives an error)
+- [x] M5.0 Move `split()` into `parser.h` / `parser.cpp` (so the fuzzer can test parsing without running commands)
+- [x] M5.1 Split the words at `|` into two commands (bad input like `| ls`, `ls |` gives an error)
 - [ ] M5.2 Create a pipe with `pipe()`
 - [ ] M5.3 Fork two children and wire them up with `dup2()`
 - [ ] M5.4 Close every unused pipe end (so the reader sees end-of-file)
@@ -118,6 +120,8 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-09-29 | M4.1 | Tested `cd /tmp` then `pwd`: folder didn't change | none (test) | Each process has its own current folder |
 | 2026-09-29 | M4.2–M4.3, M4.5 | `cd <dir>` calls `chdir` in the shell itself and skips the fork; bad folder prints `cd: No such file or directory` | `main.cpp` / `main()` | Built-ins, `chdir`, `.c_str()` |
 | 2026-09-29 | M4.4 | Plain `cd` uses `getenv("HOME")`; checks for `nullptr` before `chdir` | `main.cpp` / `main()` | Environment variables, `getenv`, `\|\|` short-circuit, reading an ASan stack trace |
+| 2026-10-03 | M5.0 | `split()` lives in `parser.cpp`, declared in `parser.h`; build lists both `.cpp` files | `parser.h`, `parser.cpp`, `main.cpp` | Headers, declaration vs definition, `#pragma once`, `""` vs `<>` includes, refactoring |
+| 2026-10-03 | M5.1 | `parsePipeline()` returns a list of commands; `\| ls`, `ls \|`, `ls \| \| wc` print a syntax error; 2 commands print `pipe: a \| b` for now | `parser.cpp` / `parsePipeline()`, `main.cpp` / `main()` | `struct`, vector of vectors, returning two things in one struct, `std::cerr`, C++ is case-sensitive |
 
 ---
 
@@ -178,6 +182,8 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - **fork / exec / wait:** the shell clones itself (fork), the clone becomes the command (exec), and the original waits (wait), so the shell survives every command.
 - **`continue` vs `_exit`:** `continue` skips the rest of the loop in a process that keeps running. `_exit` ends the process, so nothing after it runs.
 - **Why `cd` must be a built-in:** `cd` in a child changes the child's folder, then the child ends and the change is gone. The parent (the shell) never moves. Each process has its own current folder.
+- **Headers:** the `.h` file is the menu (what functions exist), the `.cpp` file is the kitchen (the code). Putting only declarations in the header means the code exists once, so files that include it don't create duplicate copies.
+- **Pipe parsing:** fill a box with words; a `|` puts the box on the shelf. An empty box at a `|` or at the end (with something already on the shelf) means a command is missing.
 - **Compile vs link:** compiling turns `.cpp` into machine code. Linking joins the pieces into one program and connects `main`. `ld:` errors come from the linker.
 
 ---
@@ -195,3 +201,5 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | M2 | `M2: run commands with fork, execvp, waitpid` (12cd90e) |
 | M3.1–M3.2 | `M3.1-M3.2: _exit(127) on failed exec, show command name in error` (60873a9) |
 | M3.3 | `M3.3: handle fork failure` (661d499), `M3.3: skip to next prompt when fork fails` (f2a8024) |
+| M4 | `M4: cd and exit built-ins, cd with no argument goes to HOME` (08c2fed) |
+| M5.0 | `M5.0: move split() into parser.h/parser.cpp` (e1f71ad) |
