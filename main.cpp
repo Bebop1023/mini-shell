@@ -9,6 +9,17 @@
 #include <cstdlib>
 
 
+void runCommand(std::vector<std::string>& words) { // Function to execute a command represented as a vector of strings (arguments)
+    std::vector<char*> args;
+    for (std::string& w : words) {
+        args.push_back(w.data());
+    }
+    args.push_back(nullptr);
+
+    execvp(args[0], args.data());
+    perror(args[0]);
+    _exit(127);
+}
 
 
 
@@ -31,7 +42,7 @@ int main(){
 
   
 
-        Pipeline p = parsePipeline(line);
+        Pipeline p = parsePipeline(line); // Parse the input line into a Pipeline structure
 
         if (!p.error.empty()) {
             std::cerr << "mysh: " << p.error << std::endl;
@@ -69,12 +80,6 @@ int main(){
 
 
 
-               std::vector<char*> args;
-        for (std::string& w : words) {
-            args.push_back(w.data());   // Use data() to get a pointer to the underlying character array of the std::string
-        }
-        args.push_back(nullptr);
-
         pid_t pid = fork(); // Create a new process using fork
 
         if (pid < 0){
@@ -83,10 +88,8 @@ int main(){
         }
 
         if (pid == 0) {
-            execvp(args[0], args.data()); // Execute the command in the child process
-             perror(args[0]); 
-            _exit(127);
-            
+                    runCommand(words);
+
         }
                 waitpid(pid, nullptr, 0);
 

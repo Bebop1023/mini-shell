@@ -2,8 +2,8 @@
 
 ## Current status
 - **Milestone:** M5. Pipes (M0–M4 done ✅)
-- **Last completed step:** M5.1 `parsePipeline()` splits at `|` and rejects empty commands
-- **Next step:** M5.2: create a pipe with `pipe()`
+- **Last completed step:** Moved exec code into `runCommand()` (prep for running two commands)
+- **Next step:** M5.2–M5.5: write the pipe code (`pipe`, two forks, `dup2`, close ends, wait for both)
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** Apply between Oct 5 and Oct 18, 2026 (NVIDIA Ignite). No benefit to applying early, so aim for a polished project. Target: M9 done before applying.
@@ -12,7 +12,7 @@
 | File | What it does |
 |------|--------------|
 | `PROGRESS.md` | This file. Tracks progress, walls, and concepts (Claude maintains it) |
-| `main.cpp` | The shell loop: prompt, read, split, built-ins (`exit`, `cd`), then `fork` + `execvp` + `waitpid` |
+| `main.cpp` | `runCommand()` builds argv and execs (child only, never returns). `main()`: prompt, read, `parsePipeline`, built-ins (`exit`, `cd`), then `fork` + `runCommand` + `waitpid` |
 | `parser.h` | Declarations of the parsing functions (the "menu") and the `Pipeline` struct (commands + error) |
 | `parser.cpp` | Parsing code: `split()` breaks a line into words; `parsePipeline()` splits words at `|` into commands and reports syntax errors. No fork/exec, so the fuzzer can test it safely |
 | `mysh`, `mysh.dSYM/` | Compiled program + debug info (build output, git-ignored) |
@@ -122,6 +122,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-09-29 | M4.4 | Plain `cd` uses `getenv("HOME")`; checks for `nullptr` before `chdir` | `main.cpp` / `main()` | Environment variables, `getenv`, `\|\|` short-circuit, reading an ASan stack trace |
 | 2026-10-03 | M5.0 | `split()` lives in `parser.cpp`, declared in `parser.h`; build lists both `.cpp` files | `parser.h`, `parser.cpp`, `main.cpp` | Headers, declaration vs definition, `#pragma once`, `""` vs `<>` includes, refactoring |
 | 2026-10-03 | M5.1 | `parsePipeline()` returns a list of commands; `\| ls`, `ls \|`, `ls \| \| wc` print a syntax error; 2 commands print `pipe: a \| b` for now | `parser.cpp` / `parsePipeline()`, `main.cpp` / `main()` | `struct`, vector of vectors, returning two things in one struct, `std::cerr`, C++ is case-sensitive |
+| 2026-10-04 | Refactor | Argv building + `execvp` + `_exit(127)` moved into `runCommand()` so the pipe code can reuse it | `main.cpp` / `runCommand()` | Functions to avoid duplicate code; file descriptors, `pipe()`, `dup2()` (concepts introduced) |
 
 ---
 
@@ -203,3 +204,4 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | M3.3 | `M3.3: handle fork failure` (661d499), `M3.3: skip to next prompt when fork fails` (f2a8024) |
 | M4 | `M4: cd and exit built-ins, cd with no argument goes to HOME` (08c2fed) |
 | M5.0 | `M5.0: move split() into parser.h/parser.cpp` (e1f71ad) |
+| M5.1 | `M5.1: parse pipelines, reject empty commands around \|` (15f4ef3) |
