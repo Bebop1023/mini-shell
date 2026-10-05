@@ -145,4 +145,11 @@ make fuzz           # build ./fuzz_parser and fuzz for 60 seconds
 - Only one pipe per line (`a | b | c` prints an error)
 - No input redirection (`<`), append (`>>`), or background jobs (`&`)
 - Built-ins don't support pipes or redirects (`cd /tmp > f` changes folder but doesn't create `f`)
+- When input is piped in instead of typed (`printf 'cat\nhello\n' | ./mysh`), `std::cin` reads ahead and buffers several lines, so a command that reads stdin (like `cat`) gets nothing, and the shell runs those lines as commands. Typed input works correctly because the terminal sends one line at a time. The fix is to read stdin one byte at a time with `read(0, &c, 1)` when it isn't a terminal, which is what bash does.
+
+## Possible improvements
+
+- CI hardening: set `permissions: contents: read` in the workflow and pin `actions/checkout` to a commit hash
+- Use `mktemp` for the test's temporary file instead of a fixed `/tmp` path
+- Use `sigaction` instead of `signal`, and check the return value of `dup2`
 

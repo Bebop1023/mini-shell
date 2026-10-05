@@ -2,8 +2,8 @@
 
 ## Current status
 - **Milestone:** All milestones M0–M9 done ✅
-- **Last completed step:** M9.4 CI green on first run; badge + Testing section in README
-- **Next step:** Commit README, final review, then apply (Oct 5–18)
+- **Last completed step:** Final code review; README updated with known limitations and possible improvements
+- **Next step:** Submit NVIDIA Ignite application (Oct 5–18). Optional: fix piped-stdin buffering, harden CI permissions
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** Apply between Oct 5 and Oct 18, 2026 (NVIDIA Ignite). No benefit to applying early, so aim for a polished project. Target: M9 done before applying.
@@ -152,6 +152,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-10-05 | M9.1 | `tests/run_tests.sh` (15 tests) + `make test`; 15/15 pass on `mysh` and `mysh-debug`; confirmed a fake shell fails 13/15 | `tests/run_tests.sh`, `Makefile` | Bash functions, `$1`, `$( )`, `2>&1`, `[[ == *text* ]]`, `$'...\n'`, exit code as pass/fail, `chmod +x`, avoid platform-specific output (wc spacing) |
 | 2026-10-05 | M9.2–M9.3 | `.github/workflows/ci.yml` on ubuntu-24.04: checkout, install clang, `make`, `make test`, ASan tests, `make fuzz FUZZCXX=clang++`. First run (16a54f3) passed every step | `.github/workflows/ci.yml` | CI, YAML (spaces only), jobs/steps, exit codes decide green/red, `?=` override from the command line, Linux ASan includes leak checking |
 | 2026-10-05 | M9.4 | README: CI badge, Testing and CI section, `make test`, files table | `README.md` | |
+| 2026-10-05 | Final review | No warnings with `-Wpedantic -Wshadow -Wconversion`; ASan + UBSan clean on all 15 tests; found piped-stdin buffering limitation; README got limitations + possible improvements | `README.md` | UBSan, stdio buffering vs child processes, CI least privilege, action pinning, `mktemp` |
 
 ---
 
@@ -208,6 +209,12 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 
 **Known limitations (for README):** no quote handling (`echo "a b"` keeps the quotes); `|` and `>` need spaces around them; only one pipe; built-ins ignore pipes and redirects; Ctrl+C kills the shell too.
 
+**9. Final review: piped input swallowed by `std::cin` (2026-10-05)**
+- **What broke:** `printf 'cat\nhello from stdin\n' | ./mysh` ran `hello` as a command instead of feeding it to `cat`.
+- **Why:** with a pipe (not a terminal) as input, `std::cin` reads a large chunk into its own buffer, taking lines meant for child commands. A terminal sends one line at a time, so interactive use was fine.
+- **Status:** documented in README Known limitations. Fix: read stdin one byte at a time with `read(0, &c, 1)` when it isn't a terminal (what bash does).
+- **Learned:** buffering in the parent can steal input from children; test with piped input, not just typed input.
+
 ---
 
 ## Concepts learned
@@ -258,3 +265,4 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | M8 | `M8: libFuzzer harness for the parser with seeds and invariants` (0bed9c0) |
 | M9.1 | `M9.1: test script with 15 tests and make test target` (4b7ce41) |
 | M9.2–M9.3 | `M9.2: GitHub Actions CI: build, tests, ASan tests, 60s fuzz` (16a54f3) |
+| M9.4 | `M9: CI badge and testing section in README` (1447093) |
