@@ -8,11 +8,14 @@
 #include <sys/wait.h>
 #include <cstdlib>
 #include <fcntl.h>
+#include <csignal>
+
 
 
 // Function to run a command represented as a vector of strings (arguments) and redirect output to a specified file if provided
 void runCommand(std::vector<std::string>& words, const std::string& outfile) { 
-    
+    signal(SIGINT, SIG_DFL);
+
     if (!outfile.empty()) {
         int fd = open(outfile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644); // Open the output file for writing, creating it if it doesn't exist, and truncating it if it does
         if (fd < 0) {
@@ -90,6 +93,9 @@ void runPipeline(std::vector<std::string>& left, std::vector<std::string>& right
 
 
 int main(){
+
+    signal(SIGINT, SIG_IGN); // Ignore the SIGINT signal (Ctrl+C) in the shell process
+
 
     while (true)
     {

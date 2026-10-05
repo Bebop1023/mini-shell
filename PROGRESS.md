@@ -2,8 +2,8 @@
 
 ## Current status
 - **Milestone:** M7. Ship (M0–M6 done ✅)
-- **Last completed step:** M7.1 Makefile (`make`, `make debug`, `make clean`)
-- **Next step:** M7.2: clean AddressSanitizer run through every feature
+- **Last completed step:** M7.2 clean AddressSanitizer run (0 errors across 26 test lines)
+- **Next step:** M7.5: shell ignores Ctrl+C (then M7.3 README)
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** Apply between Oct 5 and Oct 18, 2026 (NVIDIA Ignite). No benefit to applying early, so aim for a polished project. Target: M9 done before applying.
@@ -81,7 +81,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 
 ### M7. Ship
 - [x] M7.1 Makefile (`make`, `make debug`, `make clean`)
-- [ ] M7.2 Clean AddressSanitizer run through every feature
+- [x] M7.2 Clean AddressSanitizer run through every feature
 - [ ] M7.3 README: what it does, how to build, the 3 hardest walls
 - [ ] M7.4 Final commit and push to GitHub
 - [ ] M7.5 (optional) Shell ignores Ctrl+C so only the running command dies (`signal(SIGINT, ...)`)
@@ -131,6 +131,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-10-04 | M6.2–M6.4 | Child opens `outfile` with `O_WRONLY \| O_CREAT \| O_TRUNC, 0644`, `dup2`s it onto slot 1, closes the extra fd, then execs. In a pipeline only the right command gets the file. Bad path prints `<file>: No such file or directory` and `_exit(1)` | `main.cpp` / `runCommand()`, `runPipeline()` | `open()` flags, permissions `0644`, redirect = same chute trick as pipes |
 | 2026-10-04 | Review fix | `runPipeline` checks both forks for -1: closes the pipe, waits for child 1 if it exists, returns | `main.cpp` / `runPipeline()` | Every `fork` needs a failure check; `waitpid(-1)` waits for any child |
 | 2026-10-04 | M7.1 | `Makefile` with variables, `mysh` (-O2), `debug` → `mysh-debug` (ASan), `clean`, `.PHONY`; `.gitignore` uses `*.dSYM/` | `Makefile`, `.gitignore` | Make rules (target: deps, TAB + command), only rebuilds what changed, `-O2`, `.PHONY`, glob patterns in `.gitignore` |
+| 2026-10-04 | M7.2 | `make debug` build run through every feature (commands, errors, cd, pipes, redirects, syntax errors, Ctrl+D): 0 AddressSanitizer errors | none (test) | ASan only checks our code (children exec uninstrumented programs); no leak checking on Apple Silicon |
 
 ---
 
@@ -228,3 +229,4 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | M5.2 | `M5.2: move exec code into runCommand()` (4f723b5) |
 | M5 | `M5: run two-command pipelines with pipe and dup2` (d9820ba) |
 | M6 | `M6: output redirection with open and dup2; handle fork failure in pipelines` (0768959) |
+| M7.1 | `M7.1: Makefile with release, debug (ASan), and clean targets` (3e8e2dc) |
