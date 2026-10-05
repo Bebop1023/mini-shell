@@ -2,8 +2,8 @@
 
 ## Current status
 - **Milestone:** M7. Ship (M0–M6 done ✅)
-- **Last completed step:** M6.4 `ls > out.txt` and `ls | wc -l > count.txt` work; bad paths print an error. M6 complete.
-- **Next step:** M7.1: Makefile
+- **Last completed step:** M7.1 Makefile (`make`, `make debug`, `make clean`)
+- **Next step:** M7.2: clean AddressSanitizer run through every feature
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** Apply between Oct 5 and Oct 18, 2026 (NVIDIA Ignite). No benefit to applying early, so aim for a polished project. Target: M9 done before applying.
@@ -15,13 +15,15 @@
 | `main.cpp` | `runCommand()` builds argv and execs (child only, never returns). `runCommand()` also redirects stdout to `outfile` with `open` + `dup2`. `runPipeline()` runs `a | b` with `pipe` + 2 forks + `dup2`, handles fork failure. `main()`: prompt, read, `parsePipeline`, built-ins (`exit`, `cd`), then `fork` + `runCommand` + `waitpid` |
 | `parser.h` | Declarations of the parsing functions (the "menu") and the `Pipeline` struct (commands + error) |
 | `parser.cpp` | Parsing code: `split()` breaks a line into words; `parsePipeline()` splits words at `|` into commands and reports syntax errors. No fork/exec, so the fuzzer can test it safely |
-| `mysh`, `mysh.dSYM/` | Compiled program + debug info (build output, git-ignored) |
-| `.gitignore` | Keeps the compiled binary and debug files out of git |
+| `Makefile` | Build rules: `make`, `make debug`, `make clean` |
+| `mysh`, `mysh-debug`, `*.dSYM/` | Compiled programs + debug info (build output, git-ignored) |
+| `.gitignore` | Keeps `mysh`, `mysh-debug`, `*.dSYM/`, `.vscode/` out of git |
 
 ### Build command
 ```
-clang++ -std=c++20 -Wall -Wextra -g -fsanitize=address main.cpp parser.cpp -o mysh
-./mysh
+make          # builds ./mysh (optimized, -O2)
+make debug    # builds ./mysh-debug (AddressSanitizer + -g)
+make clean    # deletes build output
 ```
 Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Developer/CommandLineTools`).
 
@@ -78,7 +80,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - [x] M6.4 Handle errors (missing filename, can't open the file)
 
 ### M7. Ship
-- [ ] M7.1 Makefile (`make`, `make debug`, `make clean`)
+- [x] M7.1 Makefile (`make`, `make debug`, `make clean`)
 - [ ] M7.2 Clean AddressSanitizer run through every feature
 - [ ] M7.3 README: what it does, how to build, the 3 hardest walls
 - [ ] M7.4 Final commit and push to GitHub
@@ -128,6 +130,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-10-04 | M6.1 | `parsePipeline()` finds `>`; it must be followed by exactly one filename at the end. Sets `outfile` and cuts `> file` off the words. `ls >`, `ls > a b`, `> out`, `ls > f \| wc` are errors | `parser.h` / `Pipeline::outfile`, `parser.cpp` / `parsePipeline()` | Index loops, `size_t` can't go negative (use `i + 2 != size()` not `i != size() - 2`), `resize`, `break` |
 | 2026-10-04 | M6.2–M6.4 | Child opens `outfile` with `O_WRONLY \| O_CREAT \| O_TRUNC, 0644`, `dup2`s it onto slot 1, closes the extra fd, then execs. In a pipeline only the right command gets the file. Bad path prints `<file>: No such file or directory` and `_exit(1)` | `main.cpp` / `runCommand()`, `runPipeline()` | `open()` flags, permissions `0644`, redirect = same chute trick as pipes |
 | 2026-10-04 | Review fix | `runPipeline` checks both forks for -1: closes the pipe, waits for child 1 if it exists, returns | `main.cpp` / `runPipeline()` | Every `fork` needs a failure check; `waitpid(-1)` waits for any child |
+| 2026-10-04 | M7.1 | `Makefile` with variables, `mysh` (-O2), `debug` → `mysh-debug` (ASan), `clean`, `.PHONY`; `.gitignore` uses `*.dSYM/` | `Makefile`, `.gitignore` | Make rules (target: deps, TAB + command), only rebuilds what changed, `-O2`, `.PHONY`, glob patterns in `.gitignore` |
 
 ---
 
@@ -201,6 +204,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - **File descriptors:** numbered slots. 0 = input (keyboard), 1 = output (screen), 2 = errors. Programs just use the slot number and don't know where it leads.
 - **Pipes:** `pipe()` makes a tube (`fds[0]` exit, `fds[1]` entrance). `dup2` points kid 1's output into the tube and kid 2's input out of it. Everyone must let go of tube ends they don't use, or the reader waits forever.
 - **Redirection:** before the command starts, the shell points its output (slot 1) at the file instead of the screen. Same trick as pipes, with a file instead of a tube.
+- **Makefile:** a file of build recipes. `target: what it needs`, then a TAB-indented command. `make` only rebuilds when a needed file is newer than the target.
 - **Compile vs link:** compiling turns `.cpp` into machine code. Linking joins the pieces into one program and connects `main`. `ld:` errors come from the linker.
 
 ---
@@ -223,3 +227,4 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | M5.1 | `M5.1: parse pipelines, reject empty commands around \|` (15f4ef3) |
 | M5.2 | `M5.2: move exec code into runCommand()` (4f723b5) |
 | M5 | `M5: run two-command pipelines with pipe and dup2` (d9820ba) |
+| M6 | `M6: output redirection with open and dup2; handle fork failure in pipelines` (0768959) |

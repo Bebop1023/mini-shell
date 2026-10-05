@@ -1,3 +1,5 @@
 mysh
-mysh.dSYM/
+mysh-debug
+*.dSYM/
 .vscode/
+
