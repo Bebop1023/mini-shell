@@ -14,7 +14,7 @@ mysh-debug: $(SRCS) $(HDRS)
 clean:
 	rm -rf mysh mysh-debug fuzz_parser *.dSYM
 
-.PHONY: debug clean fuzz
+.PHONY: debug clean fuzz test
 
 FUZZCXX ?= /opt/homebrew/opt/llvm/bin/clang++
 
@@ -25,3 +25,6 @@ fuzz: fuzz_parser
 	mkdir -p fuzz/corpus
 	./fuzz_parser fuzz/corpus fuzz/seeds -max_total_time=60
 
+
+test: mysh
+	./tests/run_tests.sh ./mysh

@@ -2,8 +2,8 @@
 
 ## Current status
 - **Milestone:** M9. Tests + CI (M0–M8 done ✅)
-- **Last completed step:** M8.5 regression seeds + 10-minute run (4,851,327 inputs, 0 crashes). M8 complete.
-- **Next step:** Commit M8, then M9.1: test script
+- **Last completed step:** M9.1 `make test`: 15 tests pass in both `mysh` and `mysh-debug`
+- **Next step:** M9.2: GitHub Actions workflow
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** Apply between Oct 5 and Oct 18, 2026 (NVIDIA Ignite). No benefit to applying early, so aim for a polished project. Target: M9 done before applying.
@@ -19,6 +19,7 @@
 | `fuzz_parser.cpp` | libFuzzer target: feeds random input to `parsePipeline()` and `abort()`s if a parse rule is broken. Never touches `main.cpp` |
 | `fuzz/seeds/` | Starting inputs for the fuzzer (committed) |
 | `fuzz/corpus/` | Inputs the fuzzer discovered (git-ignored) |
+| `tests/run_tests.sh` | 15 bash tests: pipes input into the shell, checks output with `check` / `check_absent`, fails on any ASan error |
 | `README.md` | Public project page: features, build, example, how it works, 3 hardest bugs, limitations |
 | `mysh`, `mysh-debug`, `*.dSYM/` | Compiled programs + debug info (build output, git-ignored) |
 | `.gitignore` | Keeps `mysh`, `mysh-debug`, `*.dSYM/`, `.vscode/` out of git |
@@ -28,6 +29,7 @@
 make          # builds ./mysh (optimized, -O2)
 make debug    # builds ./mysh-debug (AddressSanitizer + -g)
 make clean    # deletes build output
+make test     # runs tests/run_tests.sh against ./mysh
 make fuzz     # builds ./fuzz_parser (Homebrew clang) and fuzzes the parser for 60 s
 ```
 Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Developer/CommandLineTools`).
@@ -99,7 +101,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - [x] M8.5 Save crash inputs as regression tests and keep a seed corpus
 
 ### M9. Tests + CI (added 2026-10-03)
-- [ ] M9.1 Test script: feed commands to `./mysh` and check the output
+- [x] M9.1 Test script: feed commands to `./mysh` and check the output
 - [ ] M9.2 GitHub Actions workflow: build with ASan and run tests on every push
 - [ ] M9.3 Run the fuzzer for 60 seconds in CI
 - [ ] M9.4 CI badge and fuzzing results in the README
@@ -146,6 +148,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-10-05 | M8.2–M8.3 | `fuzz_parser.cpp` with `LLVMFuzzerTestOneInput` + 4 rules; 5 seeds; Makefile `fuzz_parser` / `fuzz` targets (`FUZZCXX ?=`) | `fuzz_parser.cpp`, `Makefile`, `fuzz/seeds/` | `extern "C"`, raw bytes → `std::string`, invariants + `abort()`, seeds vs corpus |
 | 2026-10-05 | M8.4 | 60 s run: 673,814 inputs, 0 crashes, 211 corpus inputs. Planted bug (removed empty-command check) was caught in seconds with input `ls -ll --?l\n\|  \|  w` | none (test) | Validating a test by planting a bug (mutation testing) |
 | 2026-10-05 | M8.5 | Added 4 bad-input seeds (`ls \| \| wc`, `\| ls`, `ls \|`, `ls > a b`) as regression tests; 10-minute run: 4,851,327 inputs, 0 crashes, corpus 641. README got a Fuzzing section | `fuzz/seeds/`, `README.md` | Seeds as regression tests |
+| 2026-10-05 | M9.1 | `tests/run_tests.sh` (15 tests) + `make test`; 15/15 pass on `mysh` and `mysh-debug`; confirmed a fake shell fails 13/15 | `tests/run_tests.sh`, `Makefile` | Bash functions, `$1`, `$( )`, `2>&1`, `[[ == *text* ]]`, `$'...\n'`, exit code as pass/fail, `chmod +x`, avoid platform-specific output (wc spacing) |
 
 ---
 
@@ -248,3 +251,5 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | M7.1 | `M7.1: Makefile with release, debug (ASan), and clean targets` (3e8e2dc) |
 | M7.5 | `M7.5: shell ignores Ctrl+C; children restore default SIGINT` (c898058) |
 | M7 | `M7: README with build steps, design, and hardest bugs` (05009f0) |
+| M8 | `M8: libFuzzer harness for the parser with seeds and invariants` (0bed9c0) |
+| M9.1 | `M9.1: test script with 15 tests and make test target` |
