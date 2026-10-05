@@ -1,9 +1,9 @@
 # Mini Shell (C++): Progress
 
 ## Current status
-- **Milestone:** M7. Ship (M0–M6 done ✅)
-- **Last completed step:** M7.3 README drafted (Miles to review)
-- **Next step:** Review README, commit (M7.4), then M8 fuzzing
+- **Milestone:** M9. Tests + CI (M0–M8 done ✅)
+- **Last completed step:** M8.5 regression seeds + 10-minute run (4,851,327 inputs, 0 crashes). M8 complete.
+- **Next step:** Commit M8, then M9.1: test script
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** Apply between Oct 5 and Oct 18, 2026 (NVIDIA Ignite). No benefit to applying early, so aim for a polished project. Target: M9 done before applying.
@@ -16,6 +16,9 @@
 | `parser.h` | Declarations of the parsing functions (the "menu") and the `Pipeline` struct (commands + error) |
 | `parser.cpp` | Parsing code: `split()` breaks a line into words; `parsePipeline()` splits words at `|` into commands and reports syntax errors. No fork/exec, so the fuzzer can test it safely |
 | `Makefile` | Build rules: `make`, `make debug`, `make clean` |
+| `fuzz_parser.cpp` | libFuzzer target: feeds random input to `parsePipeline()` and `abort()`s if a parse rule is broken. Never touches `main.cpp` |
+| `fuzz/seeds/` | Starting inputs for the fuzzer (committed) |
+| `fuzz/corpus/` | Inputs the fuzzer discovered (git-ignored) |
 | `README.md` | Public project page: features, build, example, how it works, 3 hardest bugs, limitations |
 | `mysh`, `mysh-debug`, `*.dSYM/` | Compiled programs + debug info (build output, git-ignored) |
 | `.gitignore` | Keeps `mysh`, `mysh-debug`, `*.dSYM/`, `.vscode/` out of git |
@@ -25,6 +28,7 @@
 make          # builds ./mysh (optimized, -O2)
 make debug    # builds ./mysh-debug (AddressSanitizer + -g)
 make clean    # deletes build output
+make fuzz     # builds ./fuzz_parser (Homebrew clang) and fuzzes the parser for 60 s
 ```
 Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Developer/CommandLineTools`).
 
@@ -84,15 +88,15 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - [x] M7.1 Makefile (`make`, `make debug`, `make clean`)
 - [x] M7.2 Clean AddressSanitizer run through every feature
 - [x] M7.3 README: what it does, how to build, the 3 hardest walls
-- [ ] M7.4 Final commit and push to GitHub
+- [x] M7.4 Final commit and push to GitHub
 - [x] M7.5 (optional) Shell ignores Ctrl+C so only the running command dies (`signal(SIGINT, ...)`)
 
 ### M8. Fuzzing (added 2026-10-03)
-- [ ] M8.1 Install full LLVM (`brew install llvm`). Apple clang has no libFuzzer.
-- [ ] M8.2 Write `fuzz_parser.cpp` with `LLVMFuzzerTestOneInput` that calls only the parser (never fork/exec)
-- [ ] M8.3 Build with `-fsanitize=fuzzer,address` and run it
-- [ ] M8.4 Fix every crash it finds; log each one in Walls
-- [ ] M8.5 Save crash inputs as regression tests and keep a seed corpus
+- [x] M8.1 Install full LLVM (`brew install llvm`). Apple clang has no libFuzzer.
+- [x] M8.2 Write `fuzz_parser.cpp` with `LLVMFuzzerTestOneInput` that calls only the parser (never fork/exec)
+- [x] M8.3 Build with `-fsanitize=fuzzer,address` and run it
+- [x] M8.4 Fix every crash it finds; log each one in Walls
+- [x] M8.5 Save crash inputs as regression tests and keep a seed corpus
 
 ### M9. Tests + CI (added 2026-10-03)
 - [ ] M9.1 Test script: feed commands to `./mysh` and check the output
@@ -134,7 +138,14 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-10-04 | M7.1 | `Makefile` with variables, `mysh` (-O2), `debug` → `mysh-debug` (ASan), `clean`, `.PHONY`; `.gitignore` uses `*.dSYM/` | `Makefile`, `.gitignore` | Make rules (target: deps, TAB + command), only rebuilds what changed, `-O2`, `.PHONY`, glob patterns in `.gitignore` |
 | 2026-10-04 | M7.2 | `make debug` build run through every feature (commands, errors, cd, pipes, redirects, syntax errors, Ctrl+D): 0 AddressSanitizer errors | none (test) | ASan only checks our code (children exec uninstrumented programs); no leak checking on Apple Silicon |
 | 2026-10-04 | M7.5 | Shell calls `signal(SIGINT, SIG_IGN)` at startup; each child calls `signal(SIGINT, SIG_DFL)` before exec, so Ctrl+C kills `sleep` but not mysh | `main.cpp` / `main()`, `runCommand()` | Signals, SIGINT, `SIG_IGN` / `SIG_DFL`, ignored signals are inherited and survive `exec` |
-| 2026-10-04 | M7.3 | README written (by Claude, at Miles's request) from Walls + Concepts: features, build, real example session, how it works, 3 hardest bugs (duplicate shells, `cd` heap overflow, ASan hang), limitations | `README.md` | Writing for recruiters: short, scannable, honest limitations |
+| 2026-10-04 | M7.3 | README written (by Claude, at Miles's request) from Walls + Concepts: features, build, real example session, how it works, 3 hardest bugs (duplicate shells, `cd` heap overflow, ASan hang), limitations | `fuzz_parser.cpp` | libFuzzer target: feeds random input to `parsePipeline()` and `abort()`s if a parse rule is broken. Never touches `main.cpp` |
+| `fuzz/seeds/` | Starting inputs for the fuzzer (committed) |
+| `fuzz/corpus/` | Inputs the fuzzer discovered (git-ignored) |
+| `README.md` | Writing for recruiters: short, scannable, honest limitations |
+| 2026-10-05 | M8.1 | Installed Homebrew LLVM (`/opt/homebrew/opt/llvm/bin/clang++`, clang 23); test fuzzer ran 9M inputs in 4 s | none (tooling) | Fuzzing, coverage-guided mutation, why only the parser is fuzzed |
+| 2026-10-05 | M8.2–M8.3 | `fuzz_parser.cpp` with `LLVMFuzzerTestOneInput` + 4 rules; 5 seeds; Makefile `fuzz_parser` / `fuzz` targets (`FUZZCXX ?=`) | `fuzz_parser.cpp`, `Makefile`, `fuzz/seeds/` | `extern "C"`, raw bytes → `std::string`, invariants + `abort()`, seeds vs corpus |
+| 2026-10-05 | M8.4 | 60 s run: 673,814 inputs, 0 crashes, 211 corpus inputs. Planted bug (removed empty-command check) was caught in seconds with input `ls -ll --?l\n\|  \|  w` | none (test) | Validating a test by planting a bug (mutation testing) |
+| 2026-10-05 | M8.5 | Added 4 bad-input seeds (`ls \| \| wc`, `\| ls`, `ls \|`, `ls > a b`) as regression tests; 10-minute run: 4,851,327 inputs, 0 crashes, corpus 641. README got a Fuzzing section | `fuzz/seeds/`, `README.md` | Seeds as regression tests |
 
 ---
 
@@ -210,6 +221,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - **Redirection:** before the command starts, the shell points its output (slot 1) at the file instead of the screen. Same trick as pipes, with a file instead of a tube.
 - **Makefile:** a file of build recipes. `target: what it needs`, then a TAB-indented command. `make` only rebuilds when a needed file is newer than the target.
 - **Signals:** Ctrl+C sends SIGINT to every process in the terminal. The shell ignores it; children switch back to the default (die) before exec, because "ignore" is inherited and survives exec.
+- **Fuzzing:** a fuzzer throws huge numbers of mutated inputs at code and keeps the ones that reach new lines. Rules + `abort()` turn logic mistakes into crashes it can detect. Plant a bug on purpose to prove the fuzzer can catch one.
 - **Compile vs link:** compiling turns `.cpp` into machine code. Linking joins the pieces into one program and connects `main`. `ld:` errors come from the linker.
 
 ---
@@ -235,3 +247,4 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | M6 | `M6: output redirection with open and dup2; handle fork failure in pipelines` (0768959) |
 | M7.1 | `M7.1: Makefile with release, debug (ASan), and clean targets` (3e8e2dc) |
 | M7.5 | `M7.5: shell ignores Ctrl+C; children restore default SIGINT` (c898058) |
+| M7 | `M7: README with build steps, design, and hardest bugs` (05009f0) |

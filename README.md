@@ -12,6 +12,7 @@ A small Unix shell written from scratch in C++20 on macOS. I built it to learn h
 - Bad commands, bad folders, and bad syntax print an error, and the shell keeps running
 - Quits on `exit` or Ctrl+D
 - Runs clean under AddressSanitizer
+- Parser fuzz-tested with libFuzzer (about 5.5 million inputs, 0 crashes)
 
 ## Build and run
 
@@ -63,7 +64,8 @@ mysh> exit
 |---|---|
 | `main.cpp` | Shell loop, built-ins, `runCommand()` (exec + redirect), `runPipeline()` (pipe + two children) |
 | `parser.h`, `parser.cpp` | `split()` and `parsePipeline()`, which return a `Pipeline` struct (commands, output file, error) |
-| `Makefile` | `make`, `make debug`, `make clean` |
+| `fuzz_parser.cpp`, `fuzz/seeds/` | libFuzzer target and starting inputs |
+| `Makefile` | `make`, `make debug`, `make clean`, `make fuzz` |
 
 ## The 3 hardest bugs I hit
 
@@ -97,6 +99,23 @@ mysh> exit
 
 **Lesson:** When correct-looking code fails, change one thing at a time to isolate the cause. Code can run before `main()`.
 
+## Fuzzing
+
+The parser is fuzz-tested with [libFuzzer](https://llvm.org/docs/LibFuzzer.html) and AddressSanitizer.
+
+- `fuzz_parser.cpp` feeds generated input to `parsePipeline()` and checks four rules whenever parsing succeeds: no empty commands, no `|` or `>` left inside a command, no output file without a command, and no `|` or `>` as the file name. A broken rule calls `abort()`, so libFuzzer treats logic bugs like crashes and saves the input.
+- The fuzzer only links `parser.cpp`, never `main.cpp`, so generated input can't reach `execvp` and run real commands.
+- `fuzz/seeds/` holds starting inputs, including the bad inputs the parser must reject (`| ls`, `ls |`, `ls | | wc`, `ls > a b`). They run first on every fuzz run, so they act as regression tests.
+
+**Results:** about 5.5 million inputs across a 60-second run and a 10-minute run (4,851,327 inputs), with **0 crashes and 0 rule violations**.
+
+**Checking the fuzzer itself:** I removed the parser's empty-command check on purpose and reran it. libFuzzer caught the bug within seconds, building the input `ls -ll --?l\n|  |  w` from the `ls -l` seed. That confirmed a clean result means something.
+
+```bash
+brew install llvm   # Apple clang does not ship libFuzzer
+make fuzz           # build ./fuzz_parser and fuzz for 60 seconds
+```
+
 ## Known limitations
 
 - No quote handling: `echo "a b"` passes the quotes through
@@ -107,5 +126,4 @@ mysh> exit
 
 ## Next
 
-- Fuzz the parser with libFuzzer
 - Automated tests and GitHub Actions CI on every push
