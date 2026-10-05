@@ -1,5 +1,7 @@
 # mysh: a mini Unix shell in C++
 
+[![CI](https://github.com/Bebop1023/mini-shell/actions/workflows/ci.yml/badge.svg)](https://github.com/Bebop1023/mini-shell/actions/workflows/ci.yml)
+
 A small Unix shell written from scratch in C++20 on macOS. I built it to learn how a shell actually runs programs: processes, file descriptors, pipes, and signals, all through raw POSIX system calls.
 
 ## Features
@@ -13,6 +15,7 @@ A small Unix shell written from scratch in C++20 on macOS. I built it to learn h
 - Quits on `exit` or Ctrl+D
 - Runs clean under AddressSanitizer
 - Parser fuzz-tested with libFuzzer (about 5.5 million inputs, 0 crashes)
+- 15 automated tests and a GitHub Actions CI pipeline on every push
 
 ## Build and run
 
@@ -23,6 +26,7 @@ make            # optimized build -> ./mysh
 ./mysh
 
 make debug      # AddressSanitizer build -> ./mysh-debug
+make test       # run the test suite against ./mysh
 make clean      # remove build output
 ```
 
@@ -65,7 +69,9 @@ mysh> exit
 | `main.cpp` | Shell loop, built-ins, `runCommand()` (exec + redirect), `runPipeline()` (pipe + two children) |
 | `parser.h`, `parser.cpp` | `split()` and `parsePipeline()`, which return a `Pipeline` struct (commands, output file, error) |
 | `fuzz_parser.cpp`, `fuzz/seeds/` | libFuzzer target and starting inputs |
-| `Makefile` | `make`, `make debug`, `make clean`, `make fuzz` |
+| `tests/run_tests.sh` | 15 end-to-end tests |
+| `.github/workflows/ci.yml` | GitHub Actions CI |
+| `Makefile` | `make`, `make debug`, `make test`, `make clean`, `make fuzz` |
 
 ## The 3 hardest bugs I hit
 
@@ -99,6 +105,22 @@ mysh> exit
 
 **Lesson:** When correct-looking code fails, change one thing at a time to isolate the cause. Code can run before `main()`.
 
+## Testing and CI
+
+`tests/run_tests.sh` runs 15 tests by piping input into the shell and checking the output: commands, `cd`, pipes, redirects, error messages for bad commands, bad folders and bad syntax, and that `exit` really stops the shell. Any AddressSanitizer error counts as a failure. Pointing the script at a fake shell made 13 of the 15 tests fail, which confirms they can catch a broken shell.
+
+```bash
+make test                              # normal build
+make debug && ./tests/run_tests.sh ./mysh-debug   # AddressSanitizer build
+```
+
+[GitHub Actions](.github/workflows/ci.yml) runs on every push on a fresh Ubuntu machine:
+
+1. Build with `make`
+2. Run the tests
+3. Run the tests again under AddressSanitizer (on Linux this also checks for memory leaks)
+4. Fuzz the parser for 60 seconds
+
 ## Fuzzing
 
 The parser is fuzz-tested with [libFuzzer](https://llvm.org/docs/LibFuzzer.html) and AddressSanitizer.
@@ -124,6 +146,3 @@ make fuzz           # build ./fuzz_parser and fuzz for 60 seconds
 - No input redirection (`<`), append (`>>`), or background jobs (`&`)
 - Built-ins don't support pipes or redirects (`cd /tmp > f` changes folder but doesn't create `f`)
 
-## Next
-
-- Automated tests and GitHub Actions CI on every push

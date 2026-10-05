@@ -1,9 +1,9 @@
 # Mini Shell (C++): Progress
 
 ## Current status
-- **Milestone:** M9. Tests + CI (M0–M8 done ✅)
-- **Last completed step:** M9.1 `make test`: 15 tests pass in both `mysh` and `mysh-debug`
-- **Next step:** M9.2: GitHub Actions workflow
+- **Milestone:** All milestones M0–M9 done ✅
+- **Last completed step:** M9.4 CI green on first run; badge + Testing section in README
+- **Next step:** Commit README, final review, then apply (Oct 5–18)
 - **Repo:** https://github.com/Bebop1023/mini-shell
 - **Hours:** Session 1 (2026-09-29): 1.5 h
 - **Deadline:** Apply between Oct 5 and Oct 18, 2026 (NVIDIA Ignite). No benefit to applying early, so aim for a polished project. Target: M9 done before applying.
@@ -20,6 +20,7 @@
 | `fuzz/seeds/` | Starting inputs for the fuzzer (committed) |
 | `fuzz/corpus/` | Inputs the fuzzer discovered (git-ignored) |
 | `tests/run_tests.sh` | 15 bash tests: pipes input into the shell, checks output with `check` / `check_absent`, fails on any ASan error |
+| `.github/workflows/ci.yml` | GitHub Actions: on every push, build, test, ASan test (with Linux leak check), 60 s fuzz |
 | `README.md` | Public project page: features, build, example, how it works, 3 hardest bugs, limitations |
 | `mysh`, `mysh-debug`, `*.dSYM/` | Compiled programs + debug info (build output, git-ignored) |
 | `.gitignore` | Keeps `mysh`, `mysh-debug`, `*.dSYM/`, `.vscode/` out of git |
@@ -102,9 +103,9 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 
 ### M9. Tests + CI (added 2026-10-03)
 - [x] M9.1 Test script: feed commands to `./mysh` and check the output
-- [ ] M9.2 GitHub Actions workflow: build with ASan and run tests on every push
-- [ ] M9.3 Run the fuzzer for 60 seconds in CI
-- [ ] M9.4 CI badge and fuzzing results in the README
+- [x] M9.2 GitHub Actions workflow: build with ASan and run tests on every push
+- [x] M9.3 Run the fuzzer for 60 seconds in CI
+- [x] M9.4 CI badge and fuzzing results in the README
 
 ---
 
@@ -149,6 +150,8 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | 2026-10-05 | M8.4 | 60 s run: 673,814 inputs, 0 crashes, 211 corpus inputs. Planted bug (removed empty-command check) was caught in seconds with input `ls -ll --?l\n\|  \|  w` | none (test) | Validating a test by planting a bug (mutation testing) |
 | 2026-10-05 | M8.5 | Added 4 bad-input seeds (`ls \| \| wc`, `\| ls`, `ls \|`, `ls > a b`) as regression tests; 10-minute run: 4,851,327 inputs, 0 crashes, corpus 641. README got a Fuzzing section | `fuzz/seeds/`, `README.md` | Seeds as regression tests |
 | 2026-10-05 | M9.1 | `tests/run_tests.sh` (15 tests) + `make test`; 15/15 pass on `mysh` and `mysh-debug`; confirmed a fake shell fails 13/15 | `tests/run_tests.sh`, `Makefile` | Bash functions, `$1`, `$( )`, `2>&1`, `[[ == *text* ]]`, `$'...\n'`, exit code as pass/fail, `chmod +x`, avoid platform-specific output (wc spacing) |
+| 2026-10-05 | M9.2–M9.3 | `.github/workflows/ci.yml` on ubuntu-24.04: checkout, install clang, `make`, `make test`, ASan tests, `make fuzz FUZZCXX=clang++`. First run (16a54f3) passed every step | `.github/workflows/ci.yml` | CI, YAML (spaces only), jobs/steps, exit codes decide green/red, `?=` override from the command line, Linux ASan includes leak checking |
+| 2026-10-05 | M9.4 | README: CI badge, Testing and CI section, `make test`, files table | `README.md` | |
 
 ---
 
@@ -225,6 +228,7 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 - **Makefile:** a file of build recipes. `target: what it needs`, then a TAB-indented command. `make` only rebuilds when a needed file is newer than the target.
 - **Signals:** Ctrl+C sends SIGINT to every process in the terminal. The shell ignores it; children switch back to the default (die) before exec, because "ignore" is inherited and survives exec.
 - **Fuzzing:** a fuzzer throws huge numbers of mutated inputs at code and keeps the ones that reach new lines. Rules + `abort()` turn logic mistakes into crashes it can detect. Plant a bug on purpose to prove the fuzzer can catch one.
+- **CI:** on every push, GitHub starts a fresh Linux machine and runs my build and tests. Any command with a non-zero exit code turns the run red.
 - **Compile vs link:** compiling turns `.cpp` into machine code. Linking joins the pieces into one program and connects `main`. `ld:` errors come from the linker.
 
 ---
@@ -252,4 +256,5 @@ Toolchain: Command Line Tools, Apple clang 21 (`xcode-select -s /Library/Develop
 | M7.5 | `M7.5: shell ignores Ctrl+C; children restore default SIGINT` (c898058) |
 | M7 | `M7: README with build steps, design, and hardest bugs` (05009f0) |
 | M8 | `M8: libFuzzer harness for the parser with seeds and invariants` (0bed9c0) |
-| M9.1 | `M9.1: test script with 15 tests and make test target` |
+| M9.1 | `M9.1: test script with 15 tests and make test target` (4b7ce41) |
+| M9.2–M9.3 | `M9.2: GitHub Actions CI: build, tests, ASan tests, 60s fuzz` (16a54f3) |
